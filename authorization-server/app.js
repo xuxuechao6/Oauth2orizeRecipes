@@ -1,21 +1,18 @@
 'use strict';
 
 const bodyParser     = require('body-parser');
-const client         = require('./client');
+
 const cookieParser   = require('cookie-parser');
 const config         = require('./config');
 const db             = require('./db');
 const express        = require('express');
 const expressSession = require('express-session');
-const fs             = require('fs');
-const https          = require('https');
-const oauth2         = require('./oauth2');
+
+const http          = require('http');
 const passport       = require('passport');
 const path           = require('path');
-const site           = require('./site');
-const token          = require('./token');
-const user           = require('./user');
 
+const index = require('./router/index');
 console.log('Using MemoryStore for the data store');
 console.log('Using MemoryStore for the Session');
 const MemoryStore = expressSession.MemoryStore;
@@ -40,29 +37,8 @@ app.use(bodyParser.json());
 app.use(passport.initialize());
 app.use(passport.session());
 
-// Passport configuration
-require('./auth');
+app.use('/', index);
 
-app.get('/',        site.index);
-app.get('/login',   site.loginForm);
-app.post('/login',  site.login);
-app.get('/logout',  site.logout);
-app.get('/account', site.account);
-
-app.get('/dialog/authorize',           oauth2.authorization);
-app.post('/dialog/authorize/decision', oauth2.decision);
-app.post('/oauth/token',               oauth2.token);
-
-app.get('/api/userinfo',   user.info);
-app.get('/api/clientinfo', client.info);
-
-// Mimicking google's token info endpoint from
-// https://developers.google.com/accounts/docs/OAuth2UserAgent#validatetoken
-app.get('/api/tokeninfo', token.info);
-
-// Mimicking google's token revoke endpoint from
-// https://developers.google.com/identity/protocols/OAuth2WebServer
-app.get('/api/revoke', token.revoke);
 
 // static resources for stylesheets, images, javascript files
 app.use(express.static(path.join(__dirname, 'public')));
@@ -96,11 +72,8 @@ setInterval(() => {
 // openssl genrsa -out privatekey.pem 2048
 // openssl req -new -key privatekey.pem -out certrequest.csr
 // openssl x509 -req -in certrequest.csr -signkey privatekey.pem -out certificate.pem
-const options = {
-  key  : fs.readFileSync(path.join(__dirname, 'certs/privatekey.pem')),
-  cert : fs.readFileSync(path.join(__dirname, 'certs/certificate.pem')),
-};
+
 
 // Create our HTTPS server listening on port 3000.
-https.createServer(options, app).listen(3000);
+http.createServer(app).listen(3000);
 console.log('OAuth 2.0 Authorization Server started on port 3000');
